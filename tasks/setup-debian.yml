@@ -1,0 +1,36 @@
+- name: Ensure dependencies are present.
+  ansible.builtin.apt:
+    name:
+      - gnupg2
+    state: present
+
+- name: Download redis gpg key
+  ansible.builtin.get_url:
+    url: https://packages.redis.io/gpg
+    dest: /etc/apt/trusted.gpg.d/redis.asc
+
+- name: Add redis repo to sources
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/trusted.gpg.d/redis.asc] https://packages.redis.io/deb {{ ansible_distribution_release }} main"
+    state: present
+    update_cache: true
+
+- name: Install redis
+  ansible.builtin.apt:
+    name: redis
+    state: present
+
+- name: Ensure redis service is started and enabled
+  ansible.builtin.service:
+    name: redis-server
+    state: started
+    enabled: true
+
+- name: Run redis ping command
+  ansible.builtin.command: redis-cli ping
+  register: ping_command_result
+
+- name: Verify redis is working properly
+  ansible.builtin.fail:
+    msg: Did not receive PONG as a response
+  when: "'PONG' not in ping_command_result.stdout"
